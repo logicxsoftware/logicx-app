@@ -1,0 +1,57 @@
+FROM ubuntu:24.04
+
+LABEL org.opencontainers.image.title="LogicX Frappe development runtime"
+LABEL org.opencontainers.image.vendor="CODEXSUN"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.UTF-8 \
+    PYENV_ROOT=/home/devops/.pyenv \
+    NVM_DIR=/home/devops/.nvm \
+    PYTHON_VERSION=3.14.2 \
+    NODE_VERSION=24.12.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential ca-certificates cron curl git locales mariadb-client \
+    libffi-dev libjpeg-dev libldap2-dev libmariadb-dev libpq-dev libsasl2-dev \
+    libssl-dev libtiff-dev libwebp-dev libxcb1 libxml2-dev libxslt1-dev \
+    libbz2-dev liblzma-dev libncurses-dev libreadline-dev libsqlite3-dev \
+    pkg-config redis-server supervisor tk-dev tzdata wget xz-utils zlib1g-dev \
+    fonts-cantarell libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+    && locale-gen en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd devops \
+    && useradd --create-home --gid devops --shell /bin/bash devops \
+    && mkdir -p /home/devops/frappe-bench /home/devops/logs \
+    && chown -R devops:devops /home/devops
+
+USER devops
+WORKDIR /home/devops
+
+ENV PATH=/home/devops/.local/bin:/home/devops/.pyenv/bin:/home/devops/.pyenv/shims:/home/devops/.nvm/versions/node/v24.12.0/bin:$PATH
+
+RUN git clone --depth 1 https://github.com/pyenv/pyenv.git "$PYENV_ROOT" \
+    && pyenv install "$PYTHON_VERSION" \
+    && pyenv global "$PYTHON_VERSION" \
+    && python -m pip install --upgrade pip setuptools wheel tzdata \
+    && git clone --depth 1 --branch v5.x https://github.com/frappe/bench /home/devops/.bench \
+    && python -m pip install /home/devops/.bench
+
+RUN curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash \
+    && . "$NVM_DIR/nvm.sh" \
+    && nvm install "$NODE_VERSION" \
+    && nvm alias default "$NODE_VERSION" \
+    && npm install --global yarn
+
+USER root
+COPY init_frappe.py /usr/local/bin/init-frappe
+COPY entrypoint.sh /usr/local/bin/logicx-app-entrypoint
+COPY supervisord.conf /etc/supervisor/supervisord.conf
+RUN sed -i 's/\r$//' /usr/local/bin/init-frappe /usr/local/bin/logicx-app-entrypoint /etc/supervisor/supervisord.conf \
+    && chmod 0755 /usr/local/bin/init-frappe /usr/local/bin/logicx-app-entrypoint
+
+USER root
+WORKDIR /home/devops
+EXPOSE 8000
+
+ENTRYPOINT ["/usr/local/bin/logicx-app-entrypoint"]

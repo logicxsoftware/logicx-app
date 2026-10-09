@@ -1,0 +1,10 @@
+{
+  "mcp": {
+    "servers": {
+      "logicx-remote-ops": {
+        "command": "node",
+        "args": ["remote-ops-mcp/src/server.mjs"]
+      }
+    }
+  }
+}

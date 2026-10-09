@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "logicx-app",
+  "version": "0.1.3",
+  "description": "LogicX application for Frappe and ERPNext",
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "mcp:check": "npm --prefix remote-ops-mcp run check",
+    "mcp:test": "npm --prefix remote-ops-mcp test",
+    "version:show": "python tools/version.py show",
+    "version:bump": "python tools/version.py bump",
+    "changelog:append": "python tools/version.py append",
+    "check:versions": "python tools/version.py check",
+    "github:now": "python tools/github_now.py"
+  }
+}
